@@ -169,7 +169,8 @@ body.light-mode .section-title svg { fill: var(--secondary-accent);}
     nav .actions { width: 100%; justify-content: flex-start; gap: 0.2rem; }
     .header-row h2 { font-size: 1.05rem; gap: 0.2rem; }
     .header-row input[type="text"] { max-width: 100%; width: 100%; margin-top: 0.25rem; font-size: 0.82rem !important; height: 30px !important;}
-    .card-grid { grid-template-columns: 1fr; gap: 0.5rem;}
+    /* Change from 1fr to 2 columns */
+    .card-grid { grid-template-columns: repeat(2, 1fr); gap: 0.5rem;}
     .card { font-size: 0.91rem; padding: 0.5rem 0.17rem; min-height: 80px;}
     .card-icon { font-size: 1.1rem !important; margin-bottom: 0.3rem !important;}
 }
@@ -259,6 +260,102 @@ body.light-mode .file-list ul::-webkit-scrollbar-thumb { background: rgba(0,0,0,
     background: var(--secondary-accent);
 }
 
+/* Modal styles */
+.card-modal {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100vw; height: 100vh;
+    z-index: 9999;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.4s ease;
+}
+.card-modal.show {
+    pointer-events: auto;
+    opacity: 1;
+}
+.card-modal-backdrop {
+    position: absolute;
+    width: 100%; height: 100%;
+    /* No blur */
+    background: rgba(15, 23, 42, 0.6);
+    z-index: 1;
+}
+.card-modal-content {
+    position: relative;
+    background: var(--card-bg-dark);
+    max-width: 95vw;
+    max-height: 85vh;
+    width: 95vw;
+    height: 85vh;
+    overflow-y: auto;
+    border-radius: var(--radius-md);
+    padding: 1.5rem 2rem;
+    box-shadow: var(--shadow-dark);
+    transform: scale(0.8);
+    transition: transform 0.4s ease;
+    z-index: 2;
+    display: flex;
+    flex-direction: column;
+}
+#modalHeader {
+    flex-shrink: 0;
+}
+#modalContent {
+    flex-grow: 1;
+    overflow-y: auto;
+    background: transparent !important;
+}
+
+.card-modal.show .card-modal-content {
+    transform: scale(1);
+}
+.card-modal-content .file-list {
+    display: block !important;
+    box-shadow: none;
+    background: transparent;
+    color: #f1f5f9;
+}
+.card-modal-content .filename {
+    font-size: 1rem;
+    color: #f1f5f9;
+}
+.card-modal-content .file-buttons {
+    flex-wrap: wrap;
+}
+.card-modal-content .file-buttons a,
+.card-modal-content .file-buttons button {
+    margin: 0.3rem 0.4rem 0.3rem 0;
+}
+.close-modal {
+    position: absolute;
+    top: 0.8rem;
+    right: 1rem;
+    font-size: 2rem;
+    color: #fff;
+    background: none;
+    border: none;
+    cursor: pointer;
+    z-index: 10;
+    transition: transform 0.3s ease;
+}
+.close-modal:hover {
+    transform: rotate(90deg);
+}
+@media (max-width: 600px) {
+    .card-modal-content {
+        width: 95%;
+        padding: 1rem;
+    }
+    .close-modal {
+        top: 0.6rem;
+        right: 0.7rem;
+    }
+}
+
     </style>
 
 </head>
@@ -329,204 +426,216 @@ body.light-mode .file-list ul::-webkit-scrollbar-thumb { background: rgba(0,0,0,
             $defaultIcon = '<span class="material-icons card-icon">medical_services</span>';
         @endphp
 
-        {{-- PAPER 1 --}}
-        <div class="section">
-            <h3 class="section-title">
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 3H5c-1.103 0-2 .897-2 2v14c0 1.103.897 2 2 2h14c1.103 0 2-.897 2-2V5c0-1.103-.897-2-2-2zM5 5h14v4H5V5zm0 14V11h14v8H5z"/></svg>
-                PAPER 1
-            </h3>
-            <div class="card-grid">
-                @foreach($paper1 as $categoryName => $files)
-                    @php
-                        $listId   = 'list-p1-' . Str::slug($categoryName, '-');
-                        $iconHtml = $iconMap[$categoryName] ?? $defaultIcon;
-                    @endphp
-                    <div class="card" data-list-id="{{ $listId }}" data-category="{{ strtolower($categoryName) }}">
-                        {!! $iconHtml !!}
-                        <div class="card-label">{{ $categoryName }}</div>
-                        <div class="card-sub">Click to expand</div>
-                        <div class="file-list" id="{{ $listId }}">
-                            @if(count($files) === 0)
-                                <p style="color: #9ca3af; padding: 0.5rem; font-style: italic;">
-                                    No files uploaded.
-                                </p>
-                            @else
-                                <ul>
-                                    @foreach($files as $file)
-                                        @php $filename = $file['name']; @endphp
-                                        <li style="display: flex; align-items:center; justify-content: space-between;">
-                                            <span class="filename">{{ $filename }}</span>
-                                            <div class="file-buttons">
-                                                <a href="{{ $file['link'] }}" class="view-link" target="_blank">▶ View</a>
-                                                @if(Auth::user()->is_admin)
-                                                    <form method="POST" action="{{ route('admin.delete') }}" style="display:inline-block; margin-left:0.5rem;">
-                                                        @csrf
-                                                        <input type="hidden" name="path" value="{{ 'nck/paper_1/' . $categoryName . '/' . $filename }}">
-                                                        <button type="submit" class="delete-link" onclick="return confirm('Delete &quot;{{ $filename }}&quot;?')">✖</button>
-                                                    </form>
-                                                @endif
-                                                <a href="{{ route('quiz', ['file'=>$filename,'category'=>$categoryName,'section'=>'paper_1']) }}" class="test-link" style="background:#14b8a6;color:white;border-radius:6px;padding:0.45rem 0.8rem;margin-left:0.5rem;font-size:0.92rem;text-decoration:none;">📝Test</a>
-                                            </div>
-                                        </li>
-                                    @endforeach
-                                </ul>
-                            @endif
-                        </div>
-                    </div>
-                @endforeach
+      {{-- PAPER 1 --}}
+<div class="section">
+    <h3 class="section-title">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 3H5c-1.103 0-2 .897-2 2v14c0 1.103.897 2 2 2h14c1.103 0 2-.897 2-2V5c0-1.103-.897-2-2-2zM5 5h14v4H5V5zm0 14V11h14v8H5z"/></svg>
+        PAPER 1
+    </h3>
+    <div class="card-grid">
+        @foreach($paper1 as $categoryName => $files)
+            @php
+                $listId   = 'list-p1-' . Str::slug($categoryName, '-');
+                $iconHtml = $iconMap[$categoryName] ?? $defaultIcon;
+            @endphp
+            <div class="card" data-list-id="{{ $listId }}" data-category="{{ strtolower($categoryName) }}">
+                {!! $iconHtml !!}
+                <div class="card-label">{{ $categoryName }}</div>
+                <div class="card-sub">Click to expand</div>
+                <div class="file-list" id="{{ $listId }}">
+                    @if(count($files) === 0)
+                        <p style="color: #9ca3af; padding: 0.5rem; font-style: italic;">
+                            No files uploaded.
+                        </p>
+                    @else
+                        <ul>
+                            @foreach($files as $file)
+                                <li style="display: flex; align-items:center; justify-content: space-between;">
+                                    <span class="filename">Nursing1_{{ $categoryName }}</span>
+                                    <div class="file-buttons">
+                                        <a href="{{ $file['link'] }}" class="view-link" target="_blank">▶ View</a>
+                                        @if(Auth::user()->is_admin)
+                                            <form method="POST" action="{{ route('admin.delete') }}" style="display:inline-block; margin-left:0.5rem;">
+                                                @csrf
+                                                <input type="hidden" name="path" value="{{ 'nck/paper_1/' . $categoryName . '/' . $file['name'] }}">
+                                                <button type="submit" class="delete-link" onclick="return confirm('Delete &quot;{{ $file['name'] }}&quot;?')">✖</button>
+                                            </form>
+                                        @endif
+                                        <a href="{{ route('quiz', ['file'=>$file['name'],'category'=>$categoryName,'section'=>'paper_1']) }}" class="test-link" style="background:#14b8a6;color:white;border-radius:6px;padding:0.45rem 0.8rem;margin-left:0.5rem;font-size:0.92rem;text-decoration:none;">📝Test</a>
+                                    </div>
+                                </li>
+                            @endforeach
+                        </ul>
+                    @endif
+                </div>
             </div>
-        </div>
-        {{-- PAPER 2 --}}
-        <div class="section">
-            <h3 class="section-title">
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M21 4H3c-1.103 0-2 .897-2 2v12c0 1.103.897 2 2 2h18c1.103 0 2-.897 2-2V6c0-1.103-.897-2-2-2zM3 6h18v10H3V6zm2 2v6l5-3-5-3z"/></svg>
-                PAPER 2
-            </h3>
-            <div class="card-grid">
-                @foreach($paper2 as $categoryName => $files)
-                    @php
-                        $listId   = 'list-p2-' . Str::slug($categoryName, '-');
-                        $iconHtml = $iconMap[$categoryName] ?? $defaultIcon;
-                    @endphp
-                    <div class="card" data-list-id="{{ $listId }}" data-category="{{ strtolower($categoryName) }}">
-                        {!! $iconHtml !!}
-                        <div class="card-label">{{ $categoryName }}</div>
-                        <div class="card-sub">Click to expand</div>
-                        <div class="file-list" id="{{ $listId }}">
-                            @if(count($files) === 0)
-                                <p style="color: #9ca3af; padding: 0.5rem; font-style: italic;">
-                                    No files uploaded.
-                                </p>
-                            @else
-                                <ul>
-                                    @foreach($files as $file)
-                                        @php $filename = $file['name']; @endphp
-                                        <li style="display: flex; align-items:center; justify-content: space-between;">
-                                            <span class="filename">{{ $filename }}</span>
-                                            <div class="file-buttons">
-                                                <a href="{{ $file['link'] }}" class="view-link" target="_blank">▶ View</a>
-                                                @if(Auth::user()->is_admin)
-                                                    <form method="POST" action="{{ route('admin.delete') }}" style="display:inline-block; margin-left:0.5rem;">
-                                                        @csrf
-                                                        <input type="hidden" name="path" value="{{ 'nck/paper_2/' . $categoryName . '/' . $filename }}">
-                                                        <button type="submit" class="delete-link" onclick="return confirm('Delete &quot;{{ $filename }}&quot;?')">✖</button>
-                                                    </form>
-                                                @endif
-                                                <a href="{{ route('quiz', ['file'=>$filename,'category'=>$categoryName,'section'=>'paper_2']) }}" class="test-link" style="background:#14b8a6;color:white;border-radius:6px;padding:0.45rem 0.8rem;margin-left:0.5rem;font-size:0.92rem;text-decoration:none;">📝Test</a>
-                                            </div>
-                                        </li>
-                                    @endforeach
-                                </ul>
-                            @endif
-                        </div>
-                    </div>
-                @endforeach
+        @endforeach
+    </div>
+</div>
+
+{{-- PAPER 2 --}}
+<div class="section">
+    <h3 class="section-title">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M21 4H3c-1.103 0-2 .897-2 2v12c0 1.103.897 2 2 2h18c1.103 0 2-.897 2-2V6c0-1.103-.897-2-2-2zM3 6h18v10H3V6zm2 2v6l5-3-5-3z"/></svg>
+        PAPER 2
+    </h3>
+    <div class="card-grid">
+        @foreach($paper2 as $categoryName => $files)
+            @php
+                $listId   = 'list-p2-' . Str::slug($categoryName, '-');
+                $iconHtml = $iconMap[$categoryName] ?? $defaultIcon;
+            @endphp
+            <div class="card" data-list-id="{{ $listId }}" data-category="{{ strtolower($categoryName) }}">
+                {!! $iconHtml !!}
+                <div class="card-label">{{ $categoryName }}</div>
+                <div class="card-sub">Click to expand</div>
+                <div class="file-list" id="{{ $listId }}">
+                    @if(count($files) === 0)
+                        <p style="color: #9ca3af; padding: 0.5rem; font-style: italic;">
+                            No files uploaded.
+                        </p>
+                    @else
+                        <ul>
+                            @foreach($files as $file)
+                                <li style="display: flex; align-items:center; justify-content: space-between;">
+                                    <span class="filename">Nursing1_{{ $categoryName }}</span>
+                                    <div class="file-buttons">
+                                        <a href="{{ $file['link'] }}" class="view-link" target="_blank">▶ View</a>
+                                        @if(Auth::user()->is_admin)
+                                            <form method="POST" action="{{ route('admin.delete') }}" style="display:inline-block; margin-left:0.5rem;">
+                                                @csrf
+                                                <input type="hidden" name="path" value="{{ 'nck/paper_2/' . $categoryName . '/' . $file['name'] }}">
+                                                <button type="submit" class="delete-link" onclick="return confirm('Delete &quot;{{ $file['name'] }}&quot;?')">✖</button>
+                                            </form>
+                                        @endif
+                                        <a href="{{ route('quiz', ['file'=>$file['name'],'category'=>$categoryName,'section'=>'paper_2']) }}" class="test-link" style="background:#14b8a6;color:white;border-radius:6px;padding:0.45rem 0.8rem;margin-left:0.5rem;font-size:0.92rem;text-decoration:none;">📝Test</a>
+                                    </div>
+                                </li>
+                            @endforeach
+                        </ul>
+                    @endif
+                </div>
             </div>
-        </div>
-        {{-- PAST PAPERS --}}
-        <div class="section">
-            <h3 class="section-title">
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M4 4h16v2H4V4zm0 4h16v2H4V8zm0 4h16v2H4v-2zm0 4h16v2H4v-2z"/></svg>
-                PAST PAPERS
-            </h3>
-            <div class="card-grid">
-                @foreach($pastpapers as $categoryName => $files)
-                    @php
-                        $listId   = 'list-pp-' . Str::slug($categoryName, '-');
-                        $iconHtml = $iconMap[$categoryName] ?? $defaultIcon;
-                    @endphp
-                    <div class="card" data-list-id="{{ $listId }}" data-category="{{ strtolower($categoryName) }}">
-                        {!! $iconHtml !!}
-                        <div class="card-label">{{ $categoryName }}</div>
-                        <div class="card-sub">Click to expand</div>
-                        <div class="file-list" id="{{ $listId }}">
-                            @if(count($files) === 0)
-                                <p style="color: #9ca3af; padding: 0.5rem; font-style: italic;">
-                                    No files uploaded.
-                                </p>
-                            @else
-                                <ul>
-                                    @foreach($files as $file)
-                                        @php $filename = $file['name']; @endphp
-                                        <li style="display: flex; align-items:center; justify-content: space-between;">
-                                            <span class="filename">{{ $filename }}</span>
-                                            <div class="file-buttons">
-                                                <a href="{{ $file['link'] }}" class="view-link" target="_blank">▶ View</a>
-                                                @if(Auth::user()->is_admin)
-                                                    <form method="POST" action="{{ route('admin.delete') }}" style="display:inline-block; margin-left:0.5rem;">
-                                                        @csrf
-                                                        <input type="hidden" name="path" value="{{ 'nck/pastpapers/' . $categoryName . '/' . $filename }}">
-                                                        <button type="submit" class="delete-link" onclick="return confirm('Delete &quot;{{ $filename }}&quot;?')">✖</button>
-                                                    </form>
-                                                @endif
-                                                <a href="{{ route('quiz', ['file'=>$filename,'category'=>$categoryName,'section'=>'pastpapers']) }}" class="test-link" style="background:#14b8a6;color:white;border-radius:6px;padding:0.45rem 0.8rem;margin-left:0.5rem;font-size:0.92rem;text-decoration:none;">📝Test</a>
-                                            </div>
-                                        </li>
-                                    @endforeach
-                                </ul>
-                            @endif
-                        </div>
-                    </div>
-                @endforeach
+        @endforeach
+    </div>
+</div>
+
+{{-- PAST PAPERS --}}
+<div class="section">
+    <h3 class="section-title">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M4 4h16v2H4V4zm0 4h16v2H4V8zm0 4h16v2H4v-2zm0 4h16v2H4v-2z"/></svg>
+        PAST PAPERS
+    </h3>
+    <div class="card-grid">
+        @foreach($pastpapers as $categoryName => $files)
+            @php
+                $listId   = 'list-pp-' . Str::slug($categoryName, '-');
+                $iconHtml = $iconMap[$categoryName] ?? $defaultIcon;
+            @endphp
+            <div class="card" data-list-id="{{ $listId }}" data-category="{{ strtolower($categoryName) }}">
+                {!! $iconHtml !!}
+                <div class="card-label">{{ $categoryName }}</div>
+                <div class="card-sub">Click to expand</div>
+                <div class="file-list" id="{{ $listId }}">
+                    @if(count($files) === 0)
+                        <p style="color: #9ca3af; padding: 0.5rem; font-style: italic;">
+                            No files uploaded.
+                        </p>
+                    @else
+                        <ul>
+                            @foreach($files as $file)
+                                <li style="display: flex; align-items:center; justify-content: space-between;">
+                                    <span class="filename">Nursing1_{{ $categoryName }}</span>
+                                    <div class="file-buttons">
+                                        <a href="{{ $file['link'] }}" class="view-link" target="_blank">▶ View</a>
+                                        @if(Auth::user()->is_admin)
+                                            <form method="POST" action="{{ route('admin.delete') }}" style="display:inline-block; margin-left:0.5rem;">
+                                                @csrf
+                                                <input type="hidden" name="path" value="{{ 'nck/pastpapers/' . $categoryName . '/' . $file['name'] }}">
+                                                <button type="submit" class="delete-link" onclick="return confirm('Delete &quot;{{ $file['name'] }}&quot;?')">✖</button>
+                                            </form>
+                                        @endif
+                                        <a href="{{ route('quiz', ['file'=>$file['name'],'category'=>$categoryName,'section'=>'pastpapers']) }}" class="test-link" style="background:#14b8a6;color:white;border-radius:6px;padding:0.45rem 0.8rem;margin-left:0.5rem;font-size:0.92rem;text-decoration:none;">📝Test</a>
+                                    </div>
+                                </li>
+                            @endforeach
+                        </ul>
+                    @endif
+                </div>
             </div>
-        </div>
-        {{-- PREDICTIONS --}}
-        <div class="section">
-            <h3 class="section-title">
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M21 3H3c-1.103 0-2 .897-2 2v14a2 2 0 0 0 2 2h18c1.103 0 2-.897 2-2V5c0-1.103-.897-2-2-2zm-2 12H5V7h14v8z"/></svg>
-                PREDICTIONS
-            </h3>
-            <div class="card-grid">
-                @foreach($predictions as $categoryName => $files)
-                    @php
-                        $listId   = 'list-pred-' . Str::slug($categoryName, '-');
-                        $iconHtml = $iconMap[$categoryName] ?? $defaultIcon;
-                    @endphp
-                    <div class="card" data-list-id="{{ $listId }}" data-category="{{ strtolower($categoryName) }}">
-                        {!! $iconHtml !!}
-                        <div class="card-label">{{ $categoryName }}</div>
-                        <div class="card-sub">Click to expand</div>
-                        <div class="file-list" id="{{ $listId }}">
-                            @if(count($files) === 0)
-                                <p style="color: #9ca3af; padding: 0.5rem; font-style: italic;">
-                                    No files uploaded.
-                                </p>
-                            @else
-                                <ul>
-                                    @foreach($files as $file)
-                                        @php $filename = $file['name']; @endphp
-                                        <li style="display: flex; align-items:center; justify-content: space-between;">
-                                            <span class="filename">{{ $filename }}</span>
-                                            <div class="file-buttons">
-                                                <a href="{{ $file['link'] }}" class="view-link" target="_blank">▶ View</a>
-                                                @if(Auth::user()->is_admin)
-                                                    <form method="POST" action="{{ route('admin.delete') }}" style="display:inline-block; margin-left:0.5rem;">
-                                                        @csrf
-                                                        <input type="hidden" name="path" value="{{ 'nck/predictions/' . $categoryName . '/' . $filename }}">
-                                                        <button type="submit" class="delete-link" onclick="return confirm('Delete &quot;{{ $filename }}&quot;?')">✖</button>
-                                                    </form>
-                                                @endif
-                                                <a href="{{ route('quiz', ['file'=>$filename,'category'=>$categoryName,'section'=>'predictions']) }}" class="test-link" style="background:#14b8a6;color:white;border-radius:6px;padding:0.45rem 0.8rem;margin-left:0.5rem;font-size:0.92rem;text-decoration:none;">📝Test</a>
-                                            </div>
-                                        </li>
-                                    @endforeach
-                                </ul>
-                            @endif
-                        </div>
-                    </div>
-                @endforeach
+        @endforeach
+    </div>
+</div>
+
+{{-- PREDICTIONS --}}
+<div class="section">
+    <h3 class="section-title">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M21 3H3c-1.103 0-2 .897-2 2v14a2 2 0 0 0 2 2h18c1.103 0 2-.897 2-2V5c0-1.103-.897-2-2-2zm-2 12H5V7h14v8z"/></svg>
+        PREDICTIONS
+    </h3>
+    <div class="card-grid">
+        @foreach($predictions as $categoryName => $files)
+            @php
+                $listId   = 'list-pred-' . Str::slug($categoryName, '-');
+                $iconHtml = $iconMap[$categoryName] ?? $defaultIcon;
+            @endphp
+            <div class="card" data-list-id="{{ $listId }}" data-category="{{ strtolower($categoryName) }}">
+                {!! $iconHtml !!}
+                <div class="card-label">{{ $categoryName }}</div>
+                <div class="card-sub">Click to expand</div>
+                <div class="file-list" id="{{ $listId }}">
+                    @if(count($files) === 0)
+                        <p style="color: #9ca3af; padding: 0.5rem; font-style: italic;">
+                            No files uploaded.
+                        </p>
+                    @else
+                        <ul>
+                            @foreach($files as $file)
+                                <li style="display: flex; align-items:center; justify-content: space-between;">
+                                    <span class="filename">Nursing1_{{ $categoryName }}</span>
+                                    <div class="file-buttons">
+                                        <a href="{{ $file['link'] }}" class="view-link" target="_blank">▶ View</a>
+                                        @if(Auth::user()->is_admin)
+                                            <form method="POST" action="{{ route('admin.delete') }}" style="display:inline-block; margin-left:0.5rem;">
+                                                @csrf
+                                                <input type="hidden" name="path" value="{{ 'nck/predictions/' . $categoryName . '/' . $file['name'] }}">
+                                                <button type="submit" class="delete-link" onclick="return confirm('Delete &quot;{{ $file['name'] }}&quot;?')">✖</button>
+                                            </form>
+                                        @endif
+                                        <a href="{{ route('quiz', ['file'=>$file['name'],'category'=>$categoryName,'section'=>'predictions']) }}" class="test-link" style="background:#14b8a6;color:white;border-radius:6px;padding:0.45rem 0.8rem;margin-left:0.5rem;font-size:0.92rem;text-decoration:none;">📝Test</a>
+                                    </div>
+                                </li>
+                            @endforeach
+                        </ul>
+                    @endif
+                </div>
             </div>
+        @endforeach
+    </div>
+</div>
+
+
+        <!-- Modal HTML -->
+        <!-- Modal HTML -->
+    <div id="cardModal" class="card-modal" aria-hidden="true" role="dialog" aria-modal="true">
+        <div class="card-modal-backdrop" tabindex="-1" onclick="closeCardModal()"></div>
+        <div class="card-modal-content" role="document">
+            <button class="close-modal" aria-label="Close modal" onclick="closeCardModal()">×</button>
+            <div id="modalHeader" style="font-weight: 700; font-size: 1.4rem; margin-bottom: 1rem; color: #f1f5f9;"></div>
+            <div id="modalContent" class="file-list open"></div>
         </div>
     </div>
+
+
+
     <button id="back-to-top" onclick="window.scrollTo({top:0,behavior:'smooth'});" title="Back to top">↑</button>
+
     <script>
-        // Toggle Light/Dark mode
-        function toggleMode() {
-            document.body.classList.toggle('light-mode');
-            document.querySelector('.header-row .material-icons').style.color = '#3b82f6';
-        }
-        // Expand/collapse cards: only one open at a time
         document.addEventListener("DOMContentLoaded", function() {
+            const modal = document.getElementById("cardModal");
+            const modalContent = document.getElementById("modalContent");
+            const modalHeader = document.getElementById("modalHeader");
+
             document.querySelectorAll('.card').forEach(card => {
                 card.addEventListener('click', function(e) {
                     if (
@@ -534,31 +643,30 @@ body.light-mode .file-list ul::-webkit-scrollbar-thumb { background: rgba(0,0,0,
                         e.target.tagName === 'BUTTON' ||
                         e.target.closest('form')
                     ) return;
+
                     const listId = card.getAttribute('data-list-id');
                     const fileList = document.getElementById(listId);
                     if (!fileList) return;
-                    // Close all open file-lists except this one
-                    document.querySelectorAll('.file-list.open').forEach(list => {
-                        if (list !== fileList) list.classList.remove('open');
-                    });
-                    fileList.classList.toggle('open');
+
+                    modalContent.innerHTML = fileList.innerHTML;
+                    modalHeader.textContent = card.querySelector('.card-label').textContent || 'Files';
+
+                    modal.classList.add('show');
+                    modal.setAttribute('aria-hidden', 'false');
                 });
             });
         });
-        // Live search filter on card labels
-        function filterCards(query) {
-            query = query.toLowerCase().trim();
-            document.querySelectorAll('.card').forEach(card => {
-                const label = card.querySelector('.card-label').innerText.toLowerCase();
-                card.style.display = label.includes(query) ? 'flex' : 'none';
-            });
-        }
-        // Show/hide “back-to-top” button on scroll
-        window.addEventListener('scroll', () => {
-            document.getElementById('back-to-top').style.display = (window.scrollY > 300) ? 'block' : 'none';
-        });
+
+        function closeCardModal() {
+    const modal = document.getElementById("cardModal");
+    modal.classList.remove('show');
+    modal.setAttribute('aria-hidden', 'true');
+}
+
     </script>
+
     @include('partials.chatbot')
     @include('partials.peer-chat')
+
 </body>
 </html>
