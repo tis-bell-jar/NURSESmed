@@ -172,6 +172,16 @@ Route::get('/booking/confirmation/{id}', [BookingController::class, 'confirmatio
     ->name('booking.confirmation');
 Route::delete('/bookings/{booking}', [BookingController::class, 'destroy'])->name('booking.destroy');
 
+use Illuminate\Support\Facades\Artisan;
+
+Route::get('/run-migration', function () {
+    try {
+        Artisan::call('migrate', ['--force' => true]);
+        return "<pre>" . Artisan::output() . "</pre>";
+    } catch (\Exception $e) {
+        return '❌ Migration failed: ' . $e->getMessage();
+    }
+});
 
 
 
