@@ -59,3 +59,14 @@ If you discover a security vulnerability within Laravel, please send an e-mail t
 ## License
 
 The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+
+## Deployment
+
+This project runs on PHP. When deploying to Render or another host, use a PHP environment and start the server with:
+
+```bash
+php -S 0.0.0.0:8080 -t public
+```
+
+Running Python commands such as `gunicorn` will fail because no Python app exists in this repository.
+
