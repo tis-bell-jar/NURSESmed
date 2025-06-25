@@ -123,9 +123,6 @@ Route::get('/view/{paper}/{category}/{filename}', function ($paper, $category, $
     abort(415, 'Unsupported file format');
 })->name('file.render');
 
-// File list and preview routes
-Route::get('/files/{paper}/{category}', [FileController::class, 'showFileList']);
-Route::get('/preview/{paper}/{category}/{filename}', [FileController::class, 'previewOffice']);
 
 use App\Http\Controllers\ChatController;
 
@@ -133,14 +130,7 @@ Route::get('/chat/{room}/messages', [ChatController::class,'fetchMessages'])
      ->name('chat.fetch');
 Route::post('/chat/{room}/message',  [ChatController::class,'sendMessage'])
      ->name('chat.send');
-use App\Models\ChatMessage;
 
-Route::get('/chat/{room}/messages', function($room) {
-    return ChatMessage::with('user')
-        ->where('room', $room)
-        ->orderBy('id')
-        ->get();
-});
 
 Route::delete('/chat/{room}/clear', [ChatController::class, 'clear']);
 
